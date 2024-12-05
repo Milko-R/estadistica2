@@ -1,8 +1,9 @@
 import pandas as pd
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler
+from scipy.stats import randint
 
 # Cargar los datos
 data = pd.read_csv('Base_financiera_1.csv', delimiter=';')
@@ -32,15 +33,15 @@ models = {
 }
 
 # Definir los hiperparámetros a optimizar para cada modelo
-param_grids = {
+param_distributions = {
     'RandomForest': {
-        'n_estimators': [100, 200, 300, 500, 1000],
+        'n_estimators': randint(100, 1000),
         'max_depth': [None, 10, 20, 30, 40],
-        'min_samples_split': [2, 5, 10, 20],
-        'min_samples_leaf': [1, 5, 10]
+        'min_samples_split': randint(2, 20),
+        'min_samples_leaf': randint(1, 10)
     },
     'GradientBoosting': {
-        'n_estimators': [100, 200],
+        'n_estimators': randint(100, 200),
         'max_depth': [3, 5, 10],
         'learning_rate': [0.01, 0.1, 0.2],
         'subsample': [0.8, 1.0]
@@ -49,9 +50,9 @@ param_grids = {
 
 # Probar cada modelo
 for name, model in models.items():
-    grid_search = GridSearchCV(estimator=model, param_grid=param_grids[name], cv=5)
-    grid_search.fit(X_train, y_train)
-    best_model = grid_search.best_estimator_
+    random_search = RandomizedSearchCV(estimator=model, param_distributions=param_distributions[name], n_iter=50, cv=5, random_state=42, n_jobs=-1)
+    random_search.fit(X_train, y_train)
+    best_model = random_search.best_estimator_
     y_pred = best_model.predict(X_test)
     
     # Evaluar el modelo
@@ -62,4 +63,4 @@ for name, model in models.items():
     print(f'{name} Model:')
     print(f'Mean Squared Error: {mse}')
     print(f'R^2 Score: {r2}')
-    print(f'Best Parameters: {grid_search.best_params_}\n')
+    print(f'Best Parameters: {random_search.best_params_}\n')
